@@ -58,6 +58,8 @@ class Sprite
       output_sass(directory, results)
     elsif scss?
       output_scss(directory, results)
+		elsif mixins?
+			output_scss_mixins(directory, results)
     else
       output_css(directory, results)
     end
@@ -72,6 +74,10 @@ class Sprite
   def scss?
     @engine =~ /scss$/
   end
+
+	def mixins?
+		@engine =~ /mixins$/
+	end
 
   # detect all the css sprite directories. e.g. public/images/css_sprite, public/images/widget_css_sprite
   def css_sprite_directories
@@ -212,6 +218,37 @@ class Sprite
     end
   end
 
+	# output the scss mixins sprite scss file
+  def output_scss_mixins(directory, results)
+    unless results.empty?
+      dest_image_name = dest_image_name(directory)
+      dest_stylesheet_path = dest_stylesheet_path(directory)
+      dest_image_time = File.new(dest_image_path(directory)).mtime
+      File.open(dest_stylesheet_path, 'w') do |f|
+        if @config['suffix']
+          @config['suffix'].each do |key, value|
+            cns = class_names(results, :suffix => key)
+            unless cns.empty?
+              f.print cns.join(",\n")
+              f.print "\{\n"
+              f.print value.split("\n").collect { |text| "  " + text }.join("\n")
+              f.print "\}\n"
+            end
+          end
+        end
+
+        results.each do |result|
+          f.print "@mixin #{mixin_name(result[:name])}() \{\n"
+					f.print "  background: url('/#{@css_images_path}/#{dest_image_name}?#{dest_image_time.to_i}') no-repeat;\n"
+          f.print "  background-position: #{-result[:x]}px #{-result[:y]}px;\n"
+          f.print "  width: #{result[:width]}px;\n" if result[:width]
+          f.print "  height: #{result[:height]}px;\n" if result[:height]
+          f.print " \}\n"
+        end
+      end
+    end
+  end
+
   # get all the class names within the same css sprite image
   def class_names(results, options={})
     options = {:count_per_line => 5}.merge(options)
@@ -227,6 +264,10 @@ class Sprite
   def class_name(name)
     ".#{name.gsub('/', ' .').gsub(/[_-]hover\b/, ':hover').gsub(/[_-]active\b/, '.active')}"
   end
+	
+	def mixin_name(name)
+		"#{name.gsub('/', ' .').gsub(/[_-]hover\b/, '_hover').gsub(/[_-]active\b/, '_active')}"
+	end
 
   # read all images under the css sprite directory
   def all_images(directory)
@@ -251,7 +292,8 @@ class Sprite
 
   # destination stylesheet file path
   def dest_stylesheet_path(directory)
-    File.join(@stylesheet_path, File.basename(directory) + "." + @engine)
+		@engine == "mixins" ? engine = "css.scss" : engine = @engine
+    File.join(@stylesheet_path, File.basename(directory) + "." + engine)
   end
 
   # append src_image to the dest_image with position (x, y)
