@@ -238,7 +238,7 @@ class Sprite
         end
 
         results.each do |result|
-          f.print "@mixin #{mixin_name(result[:name])}() \{\n"
+          f.print "@mixin #{mixin_name(result[:name])}_sprite() \{\n"
 					f.print "  background: url('/#{@css_images_path}/#{dest_image_name}?#{dest_image_time.to_i}') no-repeat;\n"
           f.print "  background-position: #{-result[:x]}px #{-result[:y]}px;\n"
           f.print "  width: #{result[:width]}px;\n" if result[:width]
